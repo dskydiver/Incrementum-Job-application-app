@@ -1,0 +1,118 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  Employer
+  Applicant
+}
+
+model User {
+  id String @id @default(uuid())
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("delete_at")
+
+  name String?
+  email String
+
+  role UserRole
+  applicantProfile ApplicantProfile?
+  employerProfile EmployerProfile?
+
+  sentMessages Message[] @relation("MessageSender")
+  receivedMessages Message[] @relation("MessageReceiver")
+
+
+  @@map("user")
+}
+
+model ApplicantProfile {
+  userId String @id @unique @map("user_id")
+  user User @relation(fields: [userId], references: [id])
+
+  primaryRole String @map("primary_role")
+  yearsOfExperience Int @map("years_of_experience")
+  education String?
+  skills String[]
+
+  jobs ApplicantProfilesOnJobs[]
+
+  @@map("applicant_profile")
+}
+
+model EmployerProfile {
+  userId String @id @unique @map("user_id")
+  user User @relation(fields: [userId], references: [id])
+
+  jobs Job[]
+
+  @@map("employer_profile")
+}
+
+model Job {
+  id String @id @default(uuid())
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  title String
+  description String
+
+  employerId String @map("employer_id")
+  employerProfile EmployerProfile @relation(fields: [employerId], references: [userId])
+
+  applicants ApplicantProfilesOnJobs[]
+
+  @@map("job")
+}
+
+model ApplicantProfilesOnJobs {
+  applicantProfile ApplicantProfile @relation(fields: [applicantProfileId], references: [userId])
+  applicantProfileId String @map("applicant_profile_id")
+
+  job Job @relation(fields: [jobId], references: [id])
+  jobId String @map("job_id")
+
+  appliedAt DateTime @default(now())
+
+  @@id([applicantProfileId, jobId])
+  @@map("applicant_profile_on_jobs")
+}
+
+model Message {
+  id String @id @default(uuid())
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt DateTime?
+
+  content String
+
+  senderId String @map("sender_id")
+  sender User @relation("MessageSender", fields: [senderId], references: [id])
+
+  receiverId String @map("receiver_id")
+  receiver User @relation("MessageReceiver", fields: [receiverId], references: [id])
+
+  status MessageStatus
+
+  @@map("message")
+}
+
+enum MessageStatus {
+  UNDELIEVERED
+  DELIEVERED
+
+  @@map("message_status")
+}
